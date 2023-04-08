@@ -10,7 +10,7 @@ from pytube import YouTube
 
 from pytube.exceptions import RegexMatchError
 
-from logger.logger import logger
+from logger import logger
 
 size_threshold = 49_999_999  # 49 MB
 
