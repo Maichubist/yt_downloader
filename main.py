@@ -5,8 +5,10 @@ from shutil import rmtree
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher import FSMContext
+from aiogram.types import InlineQuery
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from logger import logger
 import keyboards.inline_keyboards as ik
@@ -17,8 +19,12 @@ from templates.helper import m
 from templates.greeting import g
 from validator import validate_url
 
+TOKEN = os.environ['TOKEN']
 
-TOKEN =os.environ['TOKEN']
+YOUTUBE_API_SERVICE_NAME = "youtube"
+YOUTUBE_API_VERSION = "v3"
+YOUTUBE_API_KEY = os.environ['TOKEN']
+youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=YOUTUBE_API_KEY)
 
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
@@ -26,17 +32,20 @@ dp = Dispatcher(bot, storage=storage)
 
 content_type = ''
 
+
 @dp.message_handler(commands=["start"])
 async def cmd_start(message: types.Message):
     logger.info(
         f'{message.from_user.id} {message.from_user.full_name} registred {time.asctime()}')
     await bot.send_message(chat_id=message.chat.id, text=g, parse_mode="HTML")
 
+
 @dp.message_handler(commands=["help"])
 async def cmd_start(message: types.Message):
     logger.info(
         f'{message.from_user.id} {message.from_user.full_name} asked help {time.asctime()}')
     await bot.send_message(chat_id=message.chat.id, text=m, parse_mode="HTML")
+
 
 @dp.message_handler(commands=["response"])
 async def cmd_start(message: types.Message):
@@ -46,36 +55,31 @@ async def cmd_start(message: types.Message):
     await GetResponse.waiting_for_response.set()
 
     @dp.message_handler(state=GetResponse.waiting_for_response)
-    async def send_response(message: types.Message, state: FSMContext,):
+    async def send_response(message: types.Message, state: FSMContext, ):
         await state.finish()
         response = message.text
         logger.info(f"User {message.from_user.id}|{message.from_user.full_name} left response {response}")
         await bot.send_message(chat_id=message.chat.id, text=f"Thank you !{message.chat.id}")
         with open('bot.log', "rb") as f:
             document = types.InputFile(f)
-            await bot.send_document(chat_id=404237030, document=document )
-
+            await bot.send_document(chat_id=404237030, document=document)
 
 
 @dp.message_handler(commands=["download"])
 async def cmd_botton(message: types.Message):
     logger.info(f"{message.from_user.id}|{message.from_user.full_name} choose {message.text}")
-    await message.reply("*To start working press the botton*", reply_markup=bk.markup_keyboard_source, parse_mode="Markdown")
+    await message.reply("*To start working press the botton*", reply_markup=bk.markup_keyboard_source,
+                        parse_mode="Markdown")
 
 
 @dp.message_handler(lambda message: message.text in ['YouTube', 'Instagram', 'TikTok', 'Internet'])
 async def filter_sources(message: types.Message):
     usr_choise = message.text
-    await message.reply(text=f'What do you want to download from *{usr_choise}*', reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
+    await message.reply(text=f'What do you want to download from *{usr_choise}*',
+                        reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
     logger.info(f"{message.from_user.id}|{message.from_user.full_name} choose {usr_choise}")
     if usr_choise == "YouTube":
         await message.answer("Choose one option", reply_markup=ik.markup_yt)
-    elif usr_choise == "Instagram":
-        await message.answer(f'Choose one option', reply_markup=ik.markup_inst)
-    elif usr_choise == "TikTok":
-        await message.answer(f'Choose one option', reply_markup=ik.markup_tk)
-    # elif usr_choise == "Internet":
-    #     await message.answer(f'Choose one option', reply_markup=ik.markup_it)
     else:
         logger.error(f"Unvalid user response {usr_choise}")
         await bot.send_message(chat_id=message.chat.id, text=f"Something went wrong({usr_choise})")
@@ -90,8 +94,9 @@ async def youtube_processer(callback_query: types.CallbackQuery):
     await bot.send_message(callback_query.from_user.id, f'*Paste a link here:*', parse_mode="Markdown")
     await GetLink.waiting_for_link.set()
 
-    @dp.message_handler(lambda message: message.from_user.id == callback_query.from_user.id, state=GetLink.waiting_for_link)
-    async def process_link(message: types.Message, state: FSMContext,):
+    @dp.message_handler(lambda message: message.from_user.id == callback_query.from_user.id,
+                        state=GetLink.waiting_for_link)
+    async def process_link(message: types.Message, state: FSMContext, ):
         await bot.send_message(chat_id=message.chat.id, text="Got a link, processing it")
         logger.info(f"{message.from_user.id}|{message.from_user.full_name} sent a link")
         link = message.text
@@ -119,116 +124,61 @@ async def youtube_processer(callback_query: types.CallbackQuery):
                     await message.reply(f"There was an error: \n{er}")
                     logger.error(f"There was an error:\n {er}")
             else:
-                await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}|FAILED ')
+                await bot.send_message(callback_query.from_user.id,
+                                       f'{callback_query.from_user.full_name} = {content_type}|FAILED ')
         elif message.text == "/exit":
             await state.finish()
             await message.reply(f"Now you can choose another option")
         else:
             logger.error(f"{message.from_user.full_name} did not sent correct link")
-            await message.reply(f"It doesn`t seem like a correct link. Try one more time\nIf you want to change option, press /exit")
+            await message.reply(
+                f"It doesn`t seem like a correct link. Try one more time\nIf you want to change option, press /exit")
 
 
+@dp.inline_handler()
+async def search_videos_inline(query: InlineQuery):
+    try:
+        search_response = youtube.search().list(
+            q=query.query,
+            type='video',
+            part='id,snippet',
+            maxResults=10
+        ).execute()
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith('inst_'))
-async def instagram_processer(callback_query: types.CallbackQuery):
-    global content_type
-    content_type = callback_query.data.split('_')[1]
-    logger.info(f"{callback_query.from_user.id}|{callback_query.from_user.full_name} choose {content_type}")
-    await bot.answer_callback_query(callback_query.id)
-    logger.info(f"{callback_query.from_user.full_name} choose {content_type}")
-    await bot.send_message(callback_query.from_user.id, f'\nPaste a link here:')
-    await GetLink.waiting_for_link.set()
+        results = []
 
-    @dp.message_handler(lambda message: message.from_user.id == callback_query.from_user.id, state=GetLink.waiting_for_link)
-    async def process_link(message: types.Message, state: FSMContext,):
-        await bot.send_message(chat_id=message.chat.id, text="Got a link, processing it")
-        logger.info(f"{message.from_user.id}|{message.from_user.full_name} sent a link")
-        link = message.text
-        if message.text != "/exit":
-            await state.finish()
-            if content_type == "videoi":
-                try:
-                    logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES BEGINS")
-                    video = send_video_inst(link)
-                    await bot.send_video(chat_id=message.chat.id, video=video)
-                    
-                    logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES ENDS")
-                except Exception as er:
-                    await message.reply(f"There was an error: \n{er}")
-                    logger.error(f"There was an error: {er}")
-            elif content_type == "profile":
-                try:
-                    logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES BEGINS")
-                    if send_profile(link):
-                        with open(f'{link}.zip', 'rb') as zip_file:
-                            await bot.send_document(chat_id=message.chat.id, document=zip_file)
-                            os.remove(f'{link}.zip') 
-                            rmtree(link)
-                    
-                    logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES ENDS")
-                except Exception as er:
-                    await message.reply(f"There was an error: \n{er}")
-                    logger.error(f"There was an error: {er}")
-            else:
-                await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}|FAILED ')
-        elif message.text == "/exit":
-            await state.finish()
-            await message.reply(f"Now you can choose another option")
-        else:
-            logger.error(f"{message.from_user.full_name} did not sent correct link")
-            await message.reply(f"It doesn`t seem like a correct link. Try one more time\nIf you want to change option, press /exit")
+        for search_result in search_response.get('items', []):
+            video_url = f"https://www.youtube.com/watch?v={search_result['id']['videoId']}"
+            title = search_result['snippet']['title']
+            description = search_result['snippet']['description']
+            thumbnail_url = search_result['snippet']['thumbnails']['high']['url']
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith('tk_'))
-async def tiktok_processer(callback_query: types.CallbackQuery):
-    global content_type
-    content_type = callback_query.data.split('_')[1]
-    logger.info(f"{callback_query.from_user.id}|{callback_query.from_user.full_name} choose {content_type}")
-    await bot.answer_callback_query(callback_query.id)
-    await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}\nPaste a link here:')
-    await GetLink.waiting_for_link.set()
+            # Create a message with a video result
+            message = types.InputTextMessageContent(
+                message_text=video_url,
+                parse_mode='HTML',
+                disable_web_page_preview=True
+            )
 
-    @dp.message_handler(lambda message: message.from_user.id == callback_query.from_user.id, state=GetLink.waiting_for_link)
-    async def process_link(message: types.Message, state: FSMContext,):
-        await bot.send_message(chat_id=message.chat.id, text="Got a link, processing it")
-        logger.info(f"{message.from_user.id}|{message.from_user.full_name} sent a link")
-        link = message.text
-        await state.finish()
-        await message.answer("Video from TikTok")
-        # try:
-        #     logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES BEGINS")
-        #     videotk = tiktok_downloader(link)
-        #     await bot.send_video(chat_id=message.chat.id, video=videotk)
-        #     logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES ENDS")
-        # except Exception as er:
-        #     await message.answer("Your link is not correct")
-        #     logger.error(f"Link from {message.from_user.full_name} is unvaluable")
-        
+            # Add the result to the list of results
+            results.append(types.InlineQueryResultArticle(
+                id=search_result['id']['videoId'],
+                title=title,
+                description=description,
+                input_message_content=message,
+                thumb_url=thumbnail_url
+            ))
 
+        # Return the list of results to Telegram
+        await bot.answer_inline_query(query.id, results)
 
-# @dp.callback_query_handler(lambda c: c.data and c.data.startswith('it_'))
-# async def internet_processer(callback_query: types.CallbackQuery):
-#     content_type = callback_query.data.split('_')[1]
-#     await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = Internet')
-#     logger.info(f"{callback_query.from_user.id}|{callback_query.from_user.full_name} choose Internet")
-#     await bot.answer_callback_query(callback_query.id)
-#     match content_type:
-#         case "audio":
-#             await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}\nPaste a *link* here:')
-#             # await GetLink.waiting_for_link.set()
-#         case "video":
-#             await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}\nPaste a *link* here:')
-#             # await GetLink.waiting_for_link.set()
-#         case "file":
-#             await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}\nPaste a *link* here:')
-#             # await GetLink.waiting_for_link.set()
-#         case _:
-#             await bot.send_message(callback_query.from_user.id, f'{callback_query.from_user.full_name} = {content_type}')
-
-
+    except HttpError as e:
+        print(f'An error occurred: {e}')
 
 
 async def main():
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
