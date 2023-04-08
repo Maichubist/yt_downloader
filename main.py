@@ -91,7 +91,7 @@ async def youtube_processer(callback_query: types.CallbackQuery):
     content_type = callback_query.data.split('_')[1]
     logger.info(f"{callback_query.from_user.id}|{callback_query.from_user.full_name} choose {content_type}")
     await bot.answer_callback_query(callback_query.id)
-    await bot.send_message(callback_query.from_user.id, f'*Paste a link or search video using @<botname> inline mode:*', parse_mode="Markdown")
+    await bot.send_message(callback_query.from_user.id, f'*Paste a link or search video using @s_yt_bot inline mode:*', parse_mode="Markdown")
     await GetLink.waiting_for_link.set()
 
     @dp.message_handler(lambda message: message.from_user.id == callback_query.from_user.id,
