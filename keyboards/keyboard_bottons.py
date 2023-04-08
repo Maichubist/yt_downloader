@@ -11,9 +11,7 @@ markup_keyboard_source = ReplyKeyboardMarkup(
     resize_keyboard=True, 
     one_time_keyboard=True
     ).row(
-        youtube_k, 
-        tiktok_k, 
-        instagram_k)
+        youtube_k)
     #     ).add(
     # internet_k
     # )

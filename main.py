@@ -60,7 +60,7 @@ async def cmd_start(message: types.Message):
 @dp.message_handler(commands=["download"])
 async def cmd_botton(message: types.Message):
     logger.info(f"{message.from_user.id}|{message.from_user.full_name} choose {message.text}")
-    await message.reply("*Choose the source*, you want to download content from", reply_markup=bk.markup_keyboard_source, parse_mode="Markdown")
+    await message.reply("*To start working press the botton*", reply_markup=bk.markup_keyboard_source, parse_mode="Markdown")
 
 
 @dp.message_handler(lambda message: message.text in ['YouTube', 'Instagram', 'TikTok', 'Internet'])
