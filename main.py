@@ -99,11 +99,12 @@ async def link_processor(message: types.Message):
     elif content == "Video":
         try:
             logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES BEGINS")
+            await bot.send_message(chat_id=message.from_user.id, text="It may take some time.")
             video = send_video(user_data[message.from_user.id]["link"])
             await bot.send_video(chat_id=message.from_user.id, video=video)
             logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES ENDS")
         except Exception as er:
-            await message.from_user.id.reply(f"There was an error: \n{er}")
+            await message.reply(f"There was an error: \n{er}")
             logger.error(f"There was an error:\n {er}")
     else:
         await bot.send_message(message.from_user.id,
