@@ -7,7 +7,6 @@ import subprocess
 
 import requests
 from pytube import YouTube
-
 from pytube.exceptions import RegexMatchError
 
 from logger import logger
@@ -72,3 +71,6 @@ def send_audio(url: str):
         return audio_filename
     except Exception as ex:
         raise ex
+
+
+print(send_audio("https://www.youtube.com/watch?v=GGiDjBIG2aI"))
