@@ -12,7 +12,7 @@ from pytube.exceptions import RegexMatchError
 
 from logger import logger
 
-size_threshold = 49_999_999  # 49 MB
+size_threshold = 40_999_999  # 49 MB
 
 
 def send_video(url: str):

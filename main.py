@@ -95,6 +95,7 @@ async def link_processor(message: types.Message):
         except Exception as er:
             await message.reply(f"There was an error: \n{er}")
             logger.error(f"There was an error: {er}")
+
     elif content == "Video":
         try:
             logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES BEGINS")
@@ -108,7 +109,7 @@ async def link_processor(message: types.Message):
         await bot.send_message(message.from_user.id,
                                f'{message.from_user.full_name} = {user_data}|FAILED ')
     logger.info(f"User {user_data} deleted")
-    del user_data
+    del user_data[message.from_user.id]
 
 
 @dp.inline_handler()
