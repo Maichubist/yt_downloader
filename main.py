@@ -19,7 +19,6 @@ from validator import validate_url
 
 TOKEN = os.environ['TOKEN']
 
-
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 YOUTUBE_API_KEY = os.environ['YOUTUBE_API_KEY']
@@ -91,8 +90,10 @@ async def link_processor(message: types.Message):
 
                 await bot.send_audio(chat_id=message.from_user.id, audio=audio)
                 logger.info(f"{message.from_user.id}|{message.from_user.full_name}| THE PROCES ENDS")
+                os.remove(f"{audio_name}.mp4")
                 os.remove(f"{audio_name}.mp3")
         except Exception as er:
+            # print(er)
             await message.reply(f"There was an error: \n{er}")
             logger.error(f"There was an error: {er}")
 
