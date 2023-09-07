@@ -10,7 +10,7 @@ from pytube import YouTube
 from pytube.exceptions import RegexMatchError
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_audio
 
-# from logger import logger
+from logger import logger
 
 size_threshold = 40_999_999  # 49 MB
 
@@ -21,20 +21,20 @@ def send_video(url: str):
         stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
 
         if stream.filesize > size_threshold:
-            # logger.info(f'File size is {stream.filesize_mb}, get smaller file')
+            logger.info(f'File size is {stream.filesize_mb}, get smaller file')
             stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').first()
 
         if stream.filesize > size_threshold:
-            # logger.error(f'File size is {stream.filesize_mb}| IS A MINIMUM')
+            logger.error(f'File size is {stream.filesize_mb}| IS A MINIMUM')
             raise Exception('File too large for uploading. Telegram limited us to 50mb')
 
         if not stream:
-            # logger.error('No video streams found')
+            logger.error('No video streams found')
             raise Exception("No video streams found")
 
         response = requests.get(stream.url)
         if not response.ok:
-            # logger.error(f'Got unexpected response | {response.status_code}')
+            logger.error(f'Got unexpected response | {response.status_code}')
             raise Exception("Failed to download video")
         return io.BytesIO(response.content)
     except RegexMatchError as exx:
@@ -45,31 +45,27 @@ def send_video(url: str):
 
 def send_audio(url):
     try:
-        # Create a YouTube object
         yt = YouTube(url)
 
-        # Select the highest quality audio stream available
         audio_stream = yt.streams.filter(only_audio=True).first()
 
         if audio_stream.filesize > size_threshold:
-            # logger.error(f'File size is {audio_stream.filesize_mb}| IS A MINIMUM')
+            logger.error(f'File size is {audio_stream.filesize_mb}| IS A MINIMUM')
             raise Exception('File too large for uploading. Telegram limited us to 50mb')
 
         if audio_stream:
-            # print(f"Downloading audio from '{yt.title}'...")
             audio_stream.download()
-            # print("Download complete!")
-
-            # Convert the downloaded MP4 audio to MP3
-            mp4_file_path = f"{yt.title}.mp4"
-            mp3_file_path = f"{yt.title}.mp3"
+            
+            mp4_file_path = f"{yt.title.replace('#', '')}.mp4"
+            mp3_file_path = f"{yt.title.replace('#', '')}.mp3"
             ffmpeg_extract_audio(mp4_file_path, mp3_file_path)
+            logger.info('File downloaded, sending ...')
             return yt.title
-            # logger.info('File downloaded, sending ...')
-            # print("Conversion to MP3 complete!")
+            
+           
         else:
-            # print("No audio stream available for the provided URL.")
-            # logger.error('No video streams found')
+            
+            logger.error('No video streams found')
             raise Exception("No video streams found")
 
     except Exception as e:
@@ -107,4 +103,4 @@ def send_audio(url):
 #         raise ex
 
 
-# print(send_audio("https://www.youtube.com/watch?v=2flB698MpBk"))
+# print(send_audio("https://youtu.be/XfWXHdW45Nk?si=d4hTybHkewId6jix"))

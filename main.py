@@ -93,7 +93,6 @@ async def link_processor(message: types.Message):
                 os.remove(f"{audio_name}.mp4")
                 os.remove(f"{audio_name}.mp3")
         except Exception as er:
-            # print(er)
             await message.reply(f"There was an error: \n{er}")
             logger.error(f"There was an error: {er}")
 
