@@ -60,7 +60,7 @@ def send_audio(url):
             mp3_file_path = f"{yt.title.replace('#', '')}.mp3"
             ffmpeg_extract_audio(mp4_file_path, mp3_file_path)
             logger.info('File downloaded, sending ...')
-            return yt.title
+            return yt.title.replace('#', '')
             
            
         else:
